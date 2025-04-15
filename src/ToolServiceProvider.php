@@ -2,25 +2,24 @@
 
 namespace DiegoDrese\NovaBackupManager;
 
-use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Nova\Events\ServingNova;
 use Laravel\Nova\Nova;
-use DiegoDrese\NovaBackupManager\Http\Middleware\Authorize;
 
 class ToolServiceProvider extends ServiceProvider {
     public function boot() {
         $this->publishes([
             __DIR__ . '/../config/nova-backup-manager.php' => config_path('nova-backup-manager.php'),
-        ], 'config');
+        ], 'nova-backup-manager-config');
 
 
         $this->publishes([
             __DIR__.'/../resources/lang/' => resource_path('lang/vendor/nova-backup-manager'),
         ]);
 
+        $this->publishes([
+            __DIR__.'/../stubs/BackupPermissionResolver.stub' => app_path('Nova/BackupPermissionResolver.php'),
+        ], 'nova-backup-manager-permissions');
         $this->registerTranslations();
 
         $this->app->booted(function () {

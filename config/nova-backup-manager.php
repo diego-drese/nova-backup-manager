@@ -23,4 +23,6 @@ return [
     'create' => false,
 
     'delete' => false,
+
+    'resolve_permissions' => null,
 ];
