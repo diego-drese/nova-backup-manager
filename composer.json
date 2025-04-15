@@ -12,7 +12,8 @@
     },
     "require-dev": {
         "laravel/nova": "^5.0",
-        "laravel/nova-devtool": "^1.7"
+        "laravel/nova-devtool": "^1.7",
+        "spatie/laravel-backup": "^9.2"
     },
     "repositories": [
         { "type": "composer", "url": "https://nova.laravel.com" }

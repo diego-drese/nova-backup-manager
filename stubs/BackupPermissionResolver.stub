@@ -3,11 +3,10 @@
 namespace App\Nova;
 
 use App\Models\User;
+use Illuminate\Support\Facades\Config;
 
-class BackupPermissionResolver
-{
-    public static function resolve(?User $user): array
-        {
+class BackupPermissionResolver {
+    public static function resolve(?User $user): array {
             $base = Config::get('nova-backup-manager', []);
             $permissions = [
                 'show_menu' => $user?->type === User::TYPE_ROOT,
