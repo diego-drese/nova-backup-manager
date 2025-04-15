@@ -1,50 +1,178 @@
 <template>
-  <div>
-    <Head title="Nova Backup Manager" />
+    <LoadingView :loading="initialLoading">
+        <Head :title="__('Backups')" />
 
-    <Heading class="mb-6">Nova Backup Manager</Heading>
+        <div class="flex mb-6 items-center justify-between">
+            <Heading>
+                {{ __('Backups') }}
+            </Heading>
 
-    <Card
-      class="flex flex-col items-center justify-center"
-      style="min-height: 300px"
-    >
-      <svg
-        class="animate-spin fill-80 mb-6"
-        width="69"
-        height="72"
-        viewBox="0 0 23 24"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M20.12 20.455A12.184 12.184 0 0 1 11.5 24a12.18 12.18 0 0 1-9.333-4.319c4.772 3.933 11.88 3.687 16.36-.738a7.571 7.571 0 0 0 0-10.8c-3.018-2.982-7.912-2.982-10.931 0a3.245 3.245 0 0 0 0 4.628 3.342 3.342 0 0 0 4.685 0 1.114 1.114 0 0 1 1.561 0 1.082 1.082 0 0 1 0 1.543 5.57 5.57 0 0 1-7.808 0 5.408 5.408 0 0 1 0-7.714c3.881-3.834 10.174-3.834 14.055 0a9.734 9.734 0 0 1 .03 13.855zM4.472 5.057a7.571 7.571 0 0 0 0 10.8c3.018 2.982 7.912 2.982 10.931 0a3.245 3.245 0 0 0 0-4.628 3.342 3.342 0 0 0-4.685 0 1.114 1.114 0 0 1-1.561 0 1.082 1.082 0 0 1 0-1.543 5.57 5.57 0 0 1 7.808 0 5.408 5.408 0 0 1 0 7.714c-3.881 3.834-10.174 3.834-14.055 0a9.734 9.734 0 0 1-.015-13.87C5.096 1.35 8.138 0 11.5 0c3.75 0 7.105 1.68 9.333 4.319C16.06.386 8.953.632 4.473 5.057z"
-          fill-rule="evenodd"
-        />
-      </svg>
+            <div class="flex items-center justify-end space-x-2" v-if="canCreate">
+                <Dropdown dusk="select-all-dropdown" ref="backupDropdownMenu">
+                    <DropdownTrigger :show-arrow="false" class="rounded hover:bg-gray-200 dark:hover:bg-gray-800 focus:outline-none focus:ring">
+                        <Button variant="ghost" icon="ellipsis-horizontal" />
+                    </DropdownTrigger>
 
-      <h1 class="dark:text-white text-4xl font-light mb-6">
-        We're in a black hole.
-      </h1>
+                    <template #menu>
+                        <DropdownMenu slot="menu" direction="rtl" width="250">
+                            <DropdownMenuItem
+                                as="button"
+                                @click.prevent="createPartialBackup('only-db')"
+                            >
+                                {{ __('Create database backup') }}
+                            </DropdownMenuItem>
 
-      <p class="dark:text-white text-lg opacity-70">
-        You can edit this tool's component at:
-        <code
-          class="ml-1 border border-gray-100 dark:border-gray-900 text-sm font-mono text-white bg-black rounded px-2 py-1"
-        >
-          /nova-components/NovaBackupManager/resources/js/pages/Tool.vue
-        </code>
-      </p>
-    </Card>
-  </div>
+                            <DropdownMenuItem
+                                as="button"
+                                @click.prevent="createPartialBackup('only-files')"
+                            >
+                                {{ __('Create files backup') }}
+                            </DropdownMenuItem>
+                        </DropdownMenu>
+                    </template>
+                </Dropdown>
+
+                <Button variant="solid" @click="createBackup">
+                    {{ __('Create Backup') }}
+                </Button>
+            </div>
+        </div>
+
+        <LoadingCard :loading="loading" class="mb-6">
+            <div class="overflow-hidden overflow-x-auto relative rounded-lg">
+                <backup-statuses :backup-statuses="backupStatuses" />
+            </div>
+        </LoadingCard>
+
+        <LoadingCard :loading="loading">
+            <backups
+                v-if="activeDisk"
+                :disks="disks"
+                :backups="activeDiskBackups"
+                :active-disk.sync="activeDisk"
+                :can-download="canDownload"
+                :can-delete="canDelete"
+                @delete="deleteBackup"
+                @setModalVisibility="setModalVisibility"
+            />
+        </LoadingCard>
+    </LoadingView>
 </template>
 
 <script>
-export default {
-  mounted() {
-    //
-  },
-}
-</script>
+import api from '../api';
+import Backups from '../components/Backups';
+import BackupStatuses from '../components/BackupStatuses';
+import { Button, Icon } from 'laravel-nova-ui';
 
-<style>
-/* Scoped Styles */
-</style>
+export default {
+    inheritAttrs: false,
+    components: {
+        Backups,
+        BackupStatuses,
+        Button,
+        Icon,
+    },
+
+    computed: {
+        disks() {
+            return this.backupStatuses.map(backupStatus => backupStatus.disk);
+        },
+        config() {
+            return Nova.config('nova_backup_manager') || {};
+        },
+
+        canCreate() {
+            return this.config.create !== false;
+        },
+
+        canDelete() {
+            return this.config.delete !== false;
+        },
+
+        canDownload() {
+            return this.config.download !== false;
+        },
+    },
+
+    data: () => ({
+        activeDisk: null,
+        activeDiskBackups: [],
+        backupStatuses: [],
+        initialLoading: true,
+        modalVisibility: false,
+        loading: true,
+        poller: null,
+    }),
+
+    async created() {
+        this.initialLoading = false;
+
+        await this.updateBackupStatuses();
+        await this.updateActiveDiskBackups();
+
+        this.loading = false;
+
+        this.startPolling();
+    },
+
+    beforeUnmount() {
+        if (this.poller) {
+            window.clearInterval(this.poller);
+        }
+    },
+
+    methods: {
+        updateBackupStatuses() {
+            return api.getBackupStatuses().then(backupStatuses => {
+                this.backupStatuses = backupStatuses;
+
+                if (!this.activeDisk) {
+                    this.activeDisk = backupStatuses[0].disk;
+                }
+            });
+        },
+
+        updateActiveDiskBackups() {
+            if (!this.activeDisk) {
+                return;
+            }
+
+            return api.getBackups(this.activeDisk).then(backups => {
+                this.activeDiskBackups = backups;
+            });
+        },
+
+        createBackup() {
+            return api.createBackup();
+        },
+
+        createPartialBackup(option) {
+            Nova.success(
+                this.__('Creating a new backup in the background...') + ' (' + option + ')'
+            );
+
+            return api.createPartialBackup(option);
+        },
+
+        deleteBackup({ disk, path }) {
+            return api.deleteBackup({ disk, path });
+        },
+
+        startPolling() {
+            if (Nova.config('nova_backup_manager').polling) {
+                this.poller = window.setInterval(() => {
+                    if (!this.modalVisibility) {
+                        this.updateBackupStatuses();
+                        this.updateActiveDiskBackups();
+                    }
+                }, Nova.config('nova_backup_manager').polling_interval * 1000);
+            }
+        },
+
+        setModalVisibility(state) {
+            this.modalVisibility = state;
+        },
+    },
+};
+</script>
