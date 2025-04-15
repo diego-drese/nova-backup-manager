@@ -7,7 +7,7 @@
                 size="lg"
                 :options="getDiscs()"
                 v-model="currentDisk"
-                @selected="$emit('update:activeDisk', $event.target.value)"
+                @selected="$emit('update:activeDisk', $event)"
             />
         </div>
 

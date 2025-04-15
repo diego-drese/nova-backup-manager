@@ -52,6 +52,7 @@
                 :active-disk.sync="activeDisk"
                 :can-download="canDownload"
                 :can-delete="canDelete"
+                @update:activeDisk="onDiskChanged"
                 @delete="deleteBackup"
                 @setModalVisibility="setModalVisibility"
             />
@@ -132,7 +133,10 @@ export default {
                 }
             });
         },
-
+        async onDiskChanged(disk) {
+            this.activeDisk = disk.value || disk; // fallback no caso de valor simples
+            await this.updateActiveDiskBackups();
+        },
         updateActiveDiskBackups() {
             if (!this.activeDisk) {
                 return;

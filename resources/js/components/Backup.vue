@@ -35,7 +35,11 @@ import { Icon } from 'laravel-nova-ui';
 import { computed } from 'vue';
 
 const formatDate = (rawDate) => {
-    const date = new Date(rawDate + 'Z'); // força UTC
+    if (!rawDate) return '—';
+
+    const date = new Date(rawDate); // já inclui o 'Z'
+    if (isNaN(date.getTime())) return '—';
+
     return new Intl.DateTimeFormat(undefined, {
         month: '2-digit',
         day: '2-digit',
@@ -43,7 +47,7 @@ const formatDate = (rawDate) => {
         hour: '2-digit',
         minute: '2-digit',
         timeZoneName: 'short',
-        hour12: true, // para AM/PM
+        hour12: true,
     }).format(date);
 };
 

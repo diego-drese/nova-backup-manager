@@ -33,7 +33,7 @@
                 />
             </td>
             <td class="px-2 py-2 border-t border-gray-100 dark:border-gray-700 whitespace-nowrap cursor-pointer dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-gray-900">{{ backupStatus.amount }}</td>
-            <td class="px-2 py-2 border-t border-gray-100 dark:border-gray-700 whitespace-nowrap cursor-pointer dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-gray-900">{{ formatDate(backupStatus.newest) }}</td>
+            <td class="px-2 py-2 border-t border-gray-100 dark:border-gray-700 whitespace-nowrap cursor-pointer dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-gray-900">{{ formatDate(backupStatus.newest)}}</td>
             <td class="px-2 py-2 border-t border-gray-100 dark:border-gray-700 whitespace-nowrap cursor-pointer dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-gray-900">{{ backupStatus.usedStorage }}</td>
         </tr>
         </tbody>
@@ -43,7 +43,11 @@
 <script setup>
 import { Icon } from 'laravel-nova-ui';
 const formatDate = (rawDate) => {
-    const date = new Date(rawDate + 'Z'); // força UTC
+    if (!rawDate) return '—';
+
+    const date = new Date(rawDate); // já inclui o 'Z'
+    if (isNaN(date.getTime())) return '—';
+
     return new Intl.DateTimeFormat(undefined, {
         month: '2-digit',
         day: '2-digit',
@@ -51,7 +55,7 @@ const formatDate = (rawDate) => {
         hour: '2-digit',
         minute: '2-digit',
         timeZoneName: 'short',
-        hour12: true, // para AM/PM
+        hour12: true,
     }).format(date);
 };
 defineProps({

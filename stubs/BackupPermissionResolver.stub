@@ -7,12 +7,15 @@ use App\Models\User;
 class BackupPermissionResolver
 {
     public static function resolve(?User $user): array
-    {
-        return [
-            'show_menu' => $user?->type === User::TYPE_ROOT,
-            'create' => $user?->type === User::TYPE_ROOT,
-            'delete' => $user?->type === User::TYPE_ROOT,
-            'download' => $user?->type === User::TYPE_ROOT,
-        ];
-    }
+        {
+            $base = Config::get('nova-backup-manager', []);
+            $permissions = [
+                'show_menu' => $user?->type === User::TYPE_ROOT,
+                'create' => $user?->type === User::TYPE_ROOT,
+                'delete' => $user?->type === User::TYPE_ROOT,
+                'download' => $user?->type === User::TYPE_ROOT,
+            ];
+            Config::set('nova-backup-manager', array_merge($base, $permissions));
+            return $permissions;
+        }
 }
