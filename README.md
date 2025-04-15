@@ -3,6 +3,17 @@
 A Laravel Nova 5 tool that allows administrators to manage application backups directly from the Nova interface.  
 Create, download, monitor, and delete backups in a beautiful UI.
 
+This tool uses Laravel's Cache system to improve performance when loading backup data. When scheduling backup jobs via Laravel's scheduler, it's recommended to clear the cache after successful execution:
+
+```php
+->onSuccess(function () {
+    BackupCache::forgetBackupsConfig();
+    BackupCache::forgetStatuses();
+});
+```
+
+This ensures that the Nova UI always displays up-to-date backup information.
+
 ---
 
 ## 📦 Installation
@@ -67,20 +78,20 @@ return [
 ## 🛡️ Customize Per-user Permissions
 
 To customize how permissions are evaluated per user, you can publish and customize the permission resolver:
-
 ```bash
   php artisan vendor:publish --tag=nova-backup-manager-permissions
 ```
-
-This will override the static `create`, `delete`, and `download` flags dynamically for each logged-in user.
-
 This will create the file:
-```bash
-  app/Nova/BackupPermissionResolver.php
-```
+
+app/Nova/BackupPermissionResolver.php
+
+This will override the static `show_menu`, `create`, `delete`, and `download` flags dynamically for each logged-in user.
+
 In your config/nova-backup-manager.php, point to the resolver:
+
 ```bash
   'resolve_permissions' => [\App\Nova\BackupPermissionResolver::class, 'resolve'],
+
 ```
 
 ---
@@ -97,7 +108,9 @@ In your config/nova-backup-manager.php, point to the resolver:
 
 ## 🖼️ UI Preview
 
-> _Add a screenshot here showing the UI._
+![img.png](img.png)
+
+![img_1.png](img_1.png)
 
 ---
 
